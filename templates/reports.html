@@ -1,0 +1,912 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - Análise {{ session.id }} - SAVI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i data-feather="bar-chart-2" class="me-2"></i>
+                Relatórios - Análise #{{ session.id }}
+            </h1>
+        </div>
+    </div>
+    
+    <!-- Session Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info">
+                    <h5 class="mb-0 text-white">
+                        <i data-feather="info" class="me-2"></i>
+                        Resumo da Análise
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Arquivo:</strong> {{ session.database_filename }}</p>
+                            {% if session.excel_filename %}
+                            <p><strong>Planilha:</strong> {{ session.excel_filename }}</p>
+                            {% endif %}
+                            <p><strong>Data:</strong> {{ session.created_at.strftime('%d/%m/%Y às %H:%M') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Total de Registros:</strong> {{ "{:,}".format(session.total_records).replace(',', '.') if session.total_records else 0 }}</p>
+                            <p><strong>Total Faturado:</strong> {{ format_currency(session.total_faturado) if session.total_faturado else 'R$ 0,00' }}</p>
+                            <p><strong>Pacotes Detectados:</strong> {{ session.total_pacotes if session.total_pacotes else 0 }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation Tabs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="reportTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="specialty-tab" data-bs-toggle="tab" data-bs-target="#specialty" type="button" role="tab">
+                        <i data-feather="clipboard" class="me-2"></i>
+                        Por Especialidade
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="packages-tab" data-bs-toggle="tab" data-bs-target="#packages" type="button" role="tab">
+                        <i data-feather="package" class="me-2"></i>
+                        Pacotes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="company-tab" data-bs-toggle="tab" data-bs-target="#company" type="button" role="tab">
+                        <i data-feather="home" class="me-2"></i>
+                        Por Empresa
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="doctor-tab" data-bs-toggle="tab" data-bs-target="#doctor" type="button" role="tab">
+                        <i data-feather="user" class="me-2"></i>
+                        Por Médico
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="inconsistencies-tab" data-bs-toggle="tab" data-bs-target="#inconsistencies" type="button" role="tab">
+                        <i data-feather="alert-triangle" class="me-2"></i>
+                        Inconsistências
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Tab Content -->
+    <div class="tab-content" id="reportTabsContent">
+        <!-- Specialty Tab -->
+        <div class="tab-pane fade show active" id="specialty" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="pie-chart" class="me-2"></i>
+                                Distribuição por Especialidade
+                                <button class="btn btn-sm btn-outline-primary float-end" onclick="refreshChart('specialtyChart')">
+                                    <i data-feather="refresh-cw" width="16" height="16"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="specialtyChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="bar-chart" class="me-2"></i>
+                                Faturamento por Especialidade
+                                <button class="btn btn-sm btn-outline-primary float-end" onclick="refreshChart('specialtyRevenueChart')">
+                                    <i data-feather="refresh-cw" width="16" height="16"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="specialtyRevenueChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Packages Tab -->
+        <div class="tab-pane fade" id="packages" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="package" class="me-2"></i>
+                                Pacotes Detectados
+                                <button class="btn btn-sm btn-outline-primary float-end" onclick="refreshChart('packagesChart')">
+                                    <i data-feather="refresh-cw" width="16" height="16"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="packagesChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="trending-up" class="me-2"></i>
+                                Economia com Pacotes
+                                <button class="btn btn-sm btn-outline-primary float-end" onclick="refreshChart('savingsChart')">
+                                    <i data-feather="refresh-cw" width="16" height="16"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="savingsChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Company Tab -->
+        <div class="tab-pane fade" id="company" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="home" class="me-2"></i>
+                                Faturamento por Empresa
+                                <button class="btn btn-sm btn-outline-primary float-end" onclick="refreshChart('companyChart')">
+                                    <i data-feather="refresh-cw" width="16" height="16"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="companyChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="users" class="me-2"></i>
+                                Pacientes por Empresa
+                                <button class="btn btn-sm btn-outline-primary float-end" onclick="refreshChart('companyPatientsChart')">
+                                    <i data-feather="refresh-cw" width="16" height="16"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="companyPatientsChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Doctor Tab -->
+        <div class="tab-pane fade" id="doctor" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="user" class="me-2"></i>
+                                Top 10 Médicos (Faturamento)
+                                <button class="btn btn-sm btn-outline-primary float-end" onclick="refreshChart('doctorChart')">
+                                    <i data-feather="refresh-cw" width="16" height="16"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="doctorChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="activity" class="me-2"></i>
+                                Sessões por Médico
+                                <button class="btn btn-sm btn-outline-primary float-end" onclick="refreshChart('doctorSessionsChart')">
+                                    <i data-feather="refresh-cw" width="16" height="16"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="doctorSessionsChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Inconsistencies Tab -->
+        <div class="tab-pane fade" id="inconsistencies" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0 text-dark">
+                                <i data-feather="alert-triangle" class="me-2"></i>
+                                Inconsistências Detectadas
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            {% if reports_data and reports_data.inconsistencias %}
+                            <div class="table-responsive">
+                                <table class="table table-striped" id="inconsistenciesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Empresa</th>
+                                            <th>Procedimento</th>
+                                            <th>Médico</th>
+                                            <th>Paciente</th>
+                                            <th>Motivo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for inc in reports_data.inconsistencias %}
+                                        <tr>
+                                            <td>{{ inc.empresa or '-' }}</td>
+                                            <td>{{ inc.procedimento or '-' }}</td>
+                                            <td>{{ inc.medico or '-' }}</td>
+                                            <td>{{ inc.paciente or '-' }}</td>
+                                            <td><span class="badge bg-warning">{{ inc.motivo or '-' }}</span></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i data-feather="check-circle" width="48" height="48" class="text-success mb-3"></i>
+                                <h6 class="text-success">Nenhuma inconsistência detectada!</h6>
+                                <p class="text-muted">Todos os dados estão consistentes.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Configuração global para gráficos
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.padding = 15;
+Chart.defaults.color = '#ffffff';
+Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+// Cores para gráficos
+const colors = {
+    primary: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c'],
+    gradients: [
+        'rgba(13, 110, 253, 0.8)', 'rgba(25, 135, 84, 0.8)', 'rgba(220, 53, 69, 0.8)', 
+        'rgba(255, 193, 7, 0.8)', 'rgba(111, 66, 193, 0.8)', 'rgba(253, 126, 20, 0.8)'
+    ]
+};
+
+// Armazenar instâncias dos gráficos
+let chartInstances = {};
+
+// Função para criar gráfico de rosquinha
+function createDoughnutChart(canvasId, data, title) {
+    const ctx = document.getElementById(canvasId);
+    if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
+    }
+    
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.data,
+                backgroundColor: colors.primary.slice(0, data.labels.length),
+                borderWidth: 2,
+                cutout: '60%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: false },
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ${value.toLocaleString('pt-BR')} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Função para criar gráfico de barras
+function createBarChart(canvasId, data, title, horizontal = false) {
+    const ctx = document.getElementById(canvasId);
+    if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
+    }
+    
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: title,
+                data: data.data,
+                backgroundColor: colors.gradients[0],
+                borderColor: colors.primary[0],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: horizontal ? 'y' : 'x',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#ffffff' }
+                },
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#ffffff', maxRotation: 45 }
+                }
+            }
+        }
+    });
+}
+
+// Dados para os gráficos
+{% if reports_data %}
+// Dados de especialidades
+const specialtyData = {
+    labels: [{% for esp, dados in (reports_data.resumo_por_especialidade.items() | list)[:8] %}'{{ esp[:20] }}'{{ ',' if not loop.last }}{% endfor %}],
+    data: [{% for esp, dados in (reports_data.resumo_por_especialidade.items() | list)[:8] %}{{ dados.sessoes }}{{ ',' if not loop.last }}{% endfor %}]
+};
+
+const specialtyRevenueData = {
+    labels: [{% for esp, dados in (reports_data.resumo_por_especialidade.items() | list)[:8] %}'{{ esp[:20] }}'{{ ',' if not loop.last }}{% endfor %}],
+    data: [{% for esp, dados in (reports_data.resumo_por_especialidade.items() | list)[:8] %}{{ dados.valor }}{{ ',' if not loop.last }}{% endfor %}]
+};
+
+// Dados de empresas
+const companyData = {
+    labels: [{% for emp, dados in reports_data.resumo_por_empresa.items() %}'{{ emp }}'{{ ',' if not loop.last }}{% endfor %}],
+    data: [{% for emp, dados in reports_data.resumo_por_empresa.items() %}{{ dados.valor }}{{ ',' if not loop.last }}{% endfor %}]
+};
+
+const companyPatientsData = {
+    labels: [{% for emp, dados in reports_data.resumo_por_empresa.items() %}'{{ emp }}'{{ ',' if not loop.last }}{% endfor %}],
+    data: [{% for emp, dados in reports_data.resumo_por_empresa.items() %}{{ dados.pacientes }}{{ ',' if not loop.last }}{% endfor %}]
+};
+
+// Dados de médicos
+const doctorData = {
+    labels: [{% for med, dados in (reports_data.resumo_por_medico.items() | list)[:10] %}'{{ med[:15] }}'{{ ',' if not loop.last }}{% endfor %}],
+    data: [{% for med, dados in (reports_data.resumo_por_medico.items() | list)[:10] %}{{ dados.valor }}{{ ',' if not loop.last }}{% endfor %}]
+};
+
+const doctorSessionsData = {
+    labels: [{% for med, dados in (reports_data.resumo_por_medico.items() | list)[:10] %}'{{ med[:15] }}'{{ ',' if not loop.last }}{% endfor %}],
+    data: [{% for med, dados in (reports_data.resumo_por_medico.items() | list)[:10] %}{{ dados.sessoes }}{{ ',' if not loop.last }}{% endfor %}]
+};
+
+// Dados de pacotes
+const packagesData = {
+    labels: ['Comum (R$ 1.150)', 'Especial (R$ 1.600)'],
+    data: [
+        {{ reports_data.pacotes_aplicados.comum if reports_data.pacotes_aplicados else 0 }},
+        {{ reports_data.pacotes_aplicados.especial if reports_data.pacotes_aplicados else 0 }}
+    ]
+};
+
+const savingsData = {
+    labels: ['Economia Total'],
+    data: [{{ reports_data.resumo_financeiro.economia_pacotes if reports_data.resumo_financeiro else 0 }}]
+};
+
+// Inicializar gráficos
+document.addEventListener('DOMContentLoaded', function() {
+    createDoughnutChart('specialtyChart', specialtyData, 'Distribuição por Especialidade');
+    createBarChart('specialtyRevenueChart', specialtyRevenueData, 'Faturamento por Especialidade');
+    createDoughnutChart('companyChart', companyData, 'Faturamento por Empresa');
+    createBarChart('companyPatientsChart', companyPatientsData, 'Pacientes por Empresa');
+    createBarChart('doctorChart', doctorData, 'Top 10 Médicos', true);
+    createBarChart('doctorSessionsChart', doctorSessionsData, 'Sessões por Médico');
+    createDoughnutChart('packagesChart', packagesData, 'Pacotes Detectados');
+    createBarChart('savingsChart', savingsData, 'Economia com Pacotes');
+    
+    feather.replace();
+});
+{% else %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Sem dados disponíveis
+    feather.replace();
+});
+{% endif %}
+
+// Função para atualizar gráfico
+function refreshChart(chartId) {
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i data-feather="loader" width="16" height="16" class="spinner"></i>';
+    feather.replace();
+    
+    setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        feather.replace();
+    }, 1000);
+}
+
+// CSS para spinner
+const style = document.createElement('style');
+style.textContent = `
+    .spinner { animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+`;
+document.head.appendChild(style);
+</script>
+                        <i data-feather="alert-triangle" class="me-2"></i>
+                        Inconsistências
+                        {% if session.inconsistencias > 0 %}
+                        <span class="badge bg-warning text-dark ms-1">{{ session.inconsistencias }}</span>
+                        {% endif %}
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Tab Content -->
+    <div class="tab-content" id="reportTabContent">
+        <!-- Specialty Report -->
+        <div class="tab-pane fade show active" id="specialty" role="tabpanel">
+            {% if reports.specialty.success %}
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="clipboard" class="me-2"></i>
+                                Faturamento por Especialidade
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Especialidade</th>
+                                            <th>Sessões</th>
+                                            <th>Pacientes</th>
+                                            <th>Médicos</th>
+                                            <th>Empresas</th>
+                                            <th>Faturamento</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for specialty, data in reports.specialty.data.items() %}
+                                        <tr>
+                                            <td><strong>{{ specialty }}</strong></td>
+                                            <td>{{ data.get('sessoes', 0) }}</td>
+                                            <td>{{ data.get('pacientes', 0) }}</td>
+                                            <td>{{ data.get('medicos', 0) }}</td>
+                                            <td>{{ data.get('empresas', 0) }}</td>
+                                            <td class="text-success">{{ format_currency(data.get('valor', 0)) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Distribuição Visual</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="specialtyChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                Erro ao carregar relatório por especialidade: {{ reports.specialty.error }}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Packages Report -->
+        <div class="tab-pane fade" id="packages" role="tabpanel">
+            {% if reports.packages.success %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i data-feather="package" class="me-2"></i>
+                        Pacotes Aplicados
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if reports.packages.data %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Código</th>
+                                    <th>Procedimento</th>
+                                    <th>Mês/Ano</th>
+                                    <th>Tipo</th>
+                                    <th>Sessões</th>
+                                    <th>Valor</th>
+                                    <th>Empresa</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for package in reports.packages.data %}
+                                <tr>
+                                    <td>{{ package.get('usuario_nome', 'N/A') }}</td>
+                                    <td><code>{{ package.get('usuario_codigo', 'N/A') }}</code></td>
+                                    <td>{{ package.get('procedimento_nome', 'N/A') }}</td>
+                                    <td>{{ package.get('mes_ano', 'N/A') }}</td>
+                                    <td>
+                                        <span class="badge {% if package.get('tipo_pacote') == 'especial' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                            {{ package.get('tipo_pacote', 'comum').title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ package.get('quantidade_sessoes', 0) }}</td>
+                                    <td class="text-success">{{ format_currency(package.get('valor_pacote', 0)) }}</td>
+                                    <td>{{ package.get('empresa', 'N/A') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-feather="package" width="48" height="48" class="text-muted mb-3"></i>
+                        <h5 class="text-muted">Nenhum pacote detectado</h5>
+                        <p class="text-muted">Não foram encontradas sessões com 12 ou mais atendimentos no mesmo mês.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                Erro ao carregar relatório de pacotes: {{ reports.packages.error }}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Company Report -->
+        <div class="tab-pane fade" id="company" role="tabpanel">
+            {% if reports.company.success %}
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="home" class="me-2"></i>
+                                Faturamento por Empresa
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Empresa</th>
+                                            <th>Sessões</th>
+                                            <th>Pacientes</th>
+                                            <th>Inconsistências</th>
+                                            <th>Faturamento</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for empresa, data in reports.company.data.items() %}
+                                        <tr>
+                                            <td><strong>{{ empresa }}</strong></td>
+                                            <td>{{ data.get('sessoes', 0) }}</td>
+                                            <td>{{ data.get('pacientes', 0) }}</td>
+                                            <td>
+                                                {% if data.get('inconsistencias', 0) > 0 %}
+                                                <span class="badge bg-warning text-dark">{{ data.get('inconsistencias', 0) }}</span>
+                                                {% else %}
+                                                <span class="badge bg-success">0</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-success">{{ format_currency(data.get('valor', 0)) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Distribuição Visual</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="companyChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                Erro ao carregar relatório por empresa: {{ reports.company.error }}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Doctor Report -->
+        <div class="tab-pane fade" id="doctor" role="tabpanel">
+            {% if reports.doctor.success %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i data-feather="user" class="me-2"></i>
+                        Faturamento por Médico
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Médico</th>
+                                    <th>Sessões</th>
+                                    <th>Pacientes</th>
+                                    <th>Empresas</th>
+                                    <th>Faturamento</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for medico, data in reports.doctor.data.items() %}
+                                <tr>
+                                    <td><strong>{{ medico }}</strong></td>
+                                    <td>{{ data.total_sessoes }}</td>
+                                    <td>{{ data.pacientes_unicos }}</td>
+                                    <td>{{ data.empresas }}</td>
+                                    <td class="text-success">{{ format_currency(data.total_faturado) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                Erro ao carregar relatório por médico: {{ reports.doctor.error }}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Inconsistencies Report -->
+        <div class="tab-pane fade" id="inconsistencies" role="tabpanel">
+            {% if reports.inconsistencies.success %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i data-feather="alert-triangle" class="me-2"></i>
+                        Inconsistências Encontradas
+                        {% if reports.inconsistencies.total > 0 %}
+                        <span class="badge bg-warning text-dark ms-2">{{ reports.inconsistencies.total }}</span>
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if reports.inconsistencies.data %}
+                    <div class="alert alert-warning">
+                        <i data-feather="alert-triangle" class="me-2"></i>
+                        <strong>Atenção:</strong> Foram encontradas {{ reports.inconsistencies.total }} inconsistências que precisam ser revisadas.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Empresa</th>
+                                    <th>Procedimento</th>
+                                    <th>Paciente</th>
+                                    <th>Médico</th>
+                                    <th>Data</th>
+                                    <th>Valor</th>
+                                    <th>Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inc in reports.inconsistencies.data %}
+                                <tr>
+                                    <td>{{ inc.empresa }}</td>
+                                    <td>
+                                        <code>{{ inc.procedimento_codigo }}</code><br>
+                                        <small class="text-muted">{{ inc.procedimento_nome }}</small>
+                                    </td>
+                                    <td>
+                                        {{ inc.usuario_nome }}<br>
+                                        <small class="text-muted">{{ inc.usuario_codigo }}</small>
+                                    </td>
+                                    <td>{{ inc.medico_nome }}</td>
+                                    <td>{{ inc.data_sessao }}</td>
+                                    <td>{{ format_currency(inc.valor_original) }}</td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">{{ inc.descricao }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-feather="check-circle" width="48" height="48" class="text-success mb-3"></i>
+                        <h5 class="text-success">Nenhuma inconsistência encontrada</h5>
+                        <p class="text-muted">Todos os procedimentos estão sendo realizados nas empresas autorizadas.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                Erro ao carregar relatório de inconsistências: {{ reports.inconsistencies.error }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a href="{{ url_for('main.analysis', session_id=session.id) }}" class="btn btn-outline-secondary me-2">
+                                <i data-feather="arrow-left" class="me-2"></i>
+                                Voltar à Análise
+                            </a>
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary">
+                                <i data-feather="home" class="me-2"></i>
+                                Dashboard
+                            </a>
+                        </div>
+                        <div>
+                            <button class="btn btn-info me-2" onclick="window.print()">
+                                <i data-feather="printer" class="me-2"></i>
+                                Imprimir
+                            </button>
+                            <button class="btn btn-success" onclick="exportToCSV()">
+                                <i data-feather="download" class="me-2"></i>
+                                Exportar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
+    
+    // Initialize charts when tabs are shown
+    document.addEventListener('shown.bs.tab', function(e) {
+        const targetId = e.target.getAttribute('data-bs-target');
+        
+        if (targetId === '#specialty') {
+            createSpecialtyChart();
+        } else if (targetId === '#company') {
+            createCompanyChart();
+        }
+        
+        feather.replace();
+    });
+    
+    // Initialize first chart
+    createSpecialtyChart();
+});
+
+function createSpecialtyChart() {
+    const specialtyData = {
+        {% if reports.specialty.success %}
+        labels: [{% for specialty in reports.specialty.data.keys() %}'{{ specialty }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        data: [{% for data in reports.specialty.data.values() %}{{ data.total_faturado }}{% if not loop.last %},{% endif %}{% endfor %}]
+        {% else %}
+        labels: [],
+        data: []
+        {% endif %}
+    };
+    
+    if (specialtyData.labels.length > 0) {
+        createPieChart('specialtyChart', specialtyData, 'Faturamento por Especialidade');
+    }
+}
+
+function createCompanyChart() {
+    const companyData = {
+        {% if reports.company.success %}
+        labels: [{% for empresa in reports.company.data.keys() %}'{{ empresa }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        data: [{% for data in reports.company.data.values() %}{{ data.total_faturado }}{% if not loop.last %},{% endif %}{% endfor %}]
+        {% else %}
+        labels: [],
+        data: []
+        {% endif %}
+    };
+    
+    if (companyData.labels.length > 0) {
+        createBarChart('companyChart', companyData, 'Faturamento por Empresa');
+    }
+}
+
+function exportToCSV() {
+    // Simple CSV export functionality
+    alert('Funcionalidade de exportação será implementada em breve.');
+}
+
+// Print styles
+const printStyles = `
+    @media print {
+        .btn, .nav-tabs, .card-header { display: none !important; }
+        .card { border: 1px solid #000 !important; }
+        .table { font-size: 12px !important; }
+        .tab-content > .tab-pane { display: block !important; opacity: 1 !important; }
+    }
+`;
+
+const styleSheet = document.createElement('style');
+styleSheet.type = 'text/css';
+styleSheet.innerText = printStyles;
+document.head.appendChild(styleSheet);
+</script>
+{% endblock %}

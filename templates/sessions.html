@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Minhas Análises - SAVI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i data-feather="folder" class="me-2"></i>
+                    {% if current_user.role == 'admin' %}Todas as Análises{% else %}Minhas Análises{% endif %}
+                </h1>
+                <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+                    <i data-feather="plus" class="me-2"></i>
+                    Nova Análise
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    {% if sessions %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    {% if current_user.role == 'admin' %}<th>Usuário</th>{% endif %}
+                                    <th>Arquivo</th>
+                                    <th>Status</th>
+                                    <th>Data</th>
+                                    <th>Registros</th>
+                                    <th>Total Faturado</th>
+                                    <th>Pacotes</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in sessions %}
+                                <tr>
+                                    <td><strong>#{{ session.id }}</strong></td>
+                                    {% if current_user.role == 'admin' %}
+                                    <td>
+                                        <i data-feather="user" class="me-1"></i>
+                                        {{ session.user.username }}
+                                    </td>
+                                    {% endif %}
+                                    <td>
+                                        <i data-feather="database" class="me-2"></i>
+                                        {{ session.database_filename }}
+                                        {% if session.excel_filename %}
+                                        <br><small class="text-muted">
+                                            <i data-feather="file-text" class="me-1"></i>
+                                            {{ session.excel_filename }}
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if session.status == 'completed' %}
+                                            <span class="badge bg-success">
+                                                <i data-feather="check" width="12" height="12" class="me-1"></i>
+                                                Concluída
+                                            </span>
+                                        {% elif session.status == 'processing' %}
+                                            <span class="badge bg-warning">
+                                                <i data-feather="clock" width="12" height="12" class="me-1"></i>
+                                                Processando
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i data-feather="x" width="12" height="12" class="me-1"></i>
+                                                Erro
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>
+                                        {% if session.total_records %}
+                                            {{ "{:,}".format(session.total_records).replace(',', '.') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if session.total_faturado %}
+                                            {{ format_currency(session.total_faturado) }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if session.total_pacotes %}
+                                            <span class="badge bg-info">{{ session.total_pacotes }}</span>
+                                        {% else %}
+                                            0
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('main.analysis', session_id=session.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="Ver Análise">
+                                                <i data-feather="eye" width="14" height="14"></i>
+                                            </a>
+                                            {% if session.status == 'completed' %}
+                                            <a href="{{ url_for('main.reports', session_id=session.id) }}" 
+                                               class="btn btn-sm btn-outline-success" title="Ver Relatórios">
+                                                <i data-feather="bar-chart-2" width="14" height="14"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i data-feather="inbox" width="64" height="64" class="text-muted mb-3"></i>
+                    <h4 class="text-muted">Nenhuma análise encontrada</h4>
+                    <p class="text-muted">
+                        {% if current_user.role == 'admin' %}
+                            Ainda não há análises no sistema.
+                        {% else %}
+                            Você ainda não fez nenhuma análise.
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+                        <i data-feather="upload" class="me-2"></i>
+                        Fazer Primeira Análise
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

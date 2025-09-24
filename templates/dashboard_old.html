@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SAVI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i data-feather="home" class="me-2"></i>
+                Dashboard
+            </h1>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="card-text text-white-50 mb-1">Total de Análises</p>
+                            <h3 class="text-white">{{ total_sessions }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="folder" width="32" height="32" class="text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="card-text text-white-50 mb-1">Concluídas</p>
+                            <h3 class="text-white">{{ completed_sessions }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="check-circle" width="32" height="32" class="text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="card-text text-white-50 mb-1">Em Processamento</p>
+                            <h3 class="text-white">{{ total_sessions - completed_sessions }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="clock" width="32" height="32" class="text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="card-text text-dark mb-1">Taxa de Sucesso</p>
+                            <h3 class="text-dark">
+                                {% if total_sessions > 0 %}
+                                    {{ "%.1f"|format((completed_sessions / total_sessions) * 100) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="trending-up" width="32" height="32" class="text-dark"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i data-feather="zap" class="me-2"></i>
+                        Ações Rápidas
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <a href="{{ url_for('main.upload') }}" class="btn btn-primary btn-lg w-100">
+                                <i data-feather="upload" class="me-2"></i>
+                                Nova Análise
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="{{ url_for('main.sessions') }}" class="btn btn-outline-secondary btn-lg w-100">
+                                <i data-feather="folder" class="me-2"></i>
+                                Ver Análises
+                            </a>
+                        </div>
+                        {% if current_user.role == 'admin' %}
+                        <div class="col-md-4 mb-3">
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-info btn-lg w-100">
+                                <i data-feather="user-plus" class="me-2"></i>
+                                Criar Usuário
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Sessions -->
+    {% if recent_sessions %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="clock" class="me-2"></i>
+                        Análises Recentes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Arquivo</th>
+                                    <th>Status</th>
+                                    <th>Data</th>
+                                    <th>Registros</th>
+                                    <th>Total Faturado</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in recent_sessions %}
+                                <tr>
+                                    <td>
+                                        <i data-feather="database" class="me-2"></i>
+                                        {{ session.database_filename }}
+                                        {% if session.excel_filename %}
+                                        <br><small class="text-muted">
+                                            <i data-feather="file-text" class="me-1"></i>
+                                            {{ session.excel_filename }}
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if session.status == 'completed' %}
+                                            <span class="badge bg-success">
+                                                <i data-feather="check" width="12" height="12" class="me-1"></i>
+                                                Concluída
+                                            </span>
+                                        {% elif session.status == 'processing' %}
+                                            <span class="badge bg-warning">
+                                                <i data-feather="clock" width="12" height="12" class="me-1"></i>
+                                                Processando
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i data-feather="x" width="12" height="12" class="me-1"></i>
+                                                Erro
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>
+                                        {% if session.total_records %}
+                                            {{ "{:,}".format(session.total_records).replace(',', '.') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if session.total_faturado %}
+                                            {{ format_currency(session.total_faturado) }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('main.analysis', session_id=session.id) }}" 
+                                           class="btn btn-sm btn-outline-primary me-1">
+                                            <i data-feather="eye" width="14" height="14"></i>
+                                        </a>
+                                        {% if session.status == 'completed' %}
+                                        <a href="{{ url_for('main.reports', session_id=session.id) }}" 
+                                           class="btn btn-sm btn-outline-success">
+                                            <i data-feather="bar-chart-2" width="14" height="14"></i>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i data-feather="inbox" width="64" height="64" class="text-muted mb-3"></i>
+                    <h4 class="text-muted">Nenhuma análise encontrada</h4>
+                    <p class="text-muted">Comece fazendo o upload de um banco de dados para análise.</p>
+                    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+                        <i data-feather="upload" class="me-2"></i>
+                        Fazer Upload
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- System Info -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info">
+                    <h6 class="mb-0 text-white">
+                        <i data-feather="info" class="me-2"></i>
+                        Informações do Sistema
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Funcionalidades Principais:</h6>
+                            <ul class="list-unstyled">
+                                <li><i data-feather="check" width="16" height="16" class="text-success me-2"></i> Análise de dados SQLite</li>
+                                <li><i data-feather="check" width="16" height="16" class="text-success me-2"></i> Detecção automática de pacotes</li>
+                                <li><i data-feather="check" width="16" height="16" class="text-success me-2"></i> Aplicação de preços especiais</li>
+                                <li><i data-feather="check" width="16" height="16" class="text-success me-2"></i> Validação de consistência</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Regras de Negócio:</h6>
+                            <ul class="list-unstyled">
+                                <li><i data-feather="arrow-right" width="16" height="16" class="text-info me-2"></i> Pacotes: 12+ sessões/mês</li>
+                                <li><i data-feather="arrow-right" width="16" height="16" class="text-info me-2"></i> Comum: R$ 1.150,00</li>
+                                <li><i data-feather="arrow-right" width="16" height="16" class="text-info me-2"></i> Especial: R$ 1.600,00</li>
+                                <li><i data-feather="arrow-right" width="16" height="16" class="text-info me-2"></i> Validação empresa × procedimento</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

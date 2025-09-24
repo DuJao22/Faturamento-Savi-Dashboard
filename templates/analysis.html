@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Análise {{ session.id }} - SAVI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i data-feather="activity" class="me-2"></i>
+                Análise #{{ session.id }}
+            </h1>
+        </div>
+    </div>
+    
+    <!-- Session Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>
+                                <i data-feather="database" class="me-2"></i>
+                                Arquivo de Banco:
+                            </h6>
+                            <p class="mb-2">{{ session.database_filename }}</p>
+                            
+                            {% if session.excel_filename %}
+                            <h6>
+                                <i data-feather="file-text" class="me-2"></i>
+                                Planilha Excel:
+                            </h6>
+                            <p class="mb-0">{{ session.excel_filename }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6>
+                                <i data-feather="clock" class="me-2"></i>
+                                Status:
+                            </h6>
+                            <div id="status-badge" class="mb-2">
+                                {% if session.status == 'completed' %}
+                                    <span class="badge bg-success fs-6">
+                                        <i data-feather="check" width="16" height="16" class="me-1"></i>
+                                        Concluída
+                                    </span>
+                                {% elif session.status == 'processing' %}
+                                    <span class="badge bg-warning fs-6">
+                                        <i data-feather="clock" width="16" height="16" class="me-1"></i>
+                                        Processando
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger fs-6">
+                                        <i data-feather="x" width="16" height="16" class="me-1"></i>
+                                        Erro
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <h6>
+                                <i data-feather="calendar" class="me-2"></i>
+                                Criado em:
+                            </h6>
+                            <p class="mb-0">{{ session.created_at.strftime('%d/%m/%Y às %H:%M') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Progress/Results -->
+    {% if session.status == 'processing' %}
+    <div class="row mb-4" id="processing-section">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0 text-dark">
+                        <i data-feather="clock" class="me-2"></i>
+                        Processamento em Andamento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="spinner-border text-warning mb-3" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mb-0">Analisando dados e aplicando regras de negócio...</p>
+                        <small class="text-muted">Esta operação pode levar alguns minutos dependendo do tamanho do arquivo.</small>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>Etapas do Processamento:</h6>
+                        <ul class="list-unstyled">
+                            <li><i data-feather="check" width="16" height="16" class="text-success me-2"></i> Carregamento dos dados</li>
+                            <li><i data-feather="loader" width="16" height="16" class="text-warning me-2"></i> Detecção de pacotes (12+ sessões)</li>
+                            <li><i data-feather="circle" width="16" height="16" class="text-muted me-2"></i> Aplicação de preços especiais</li>
+                            <li><i data-feather="circle" width="16" height="16" class="text-muted me-2"></i> Validação empresa × procedimento</li>
+                            <li><i data-feather="circle" width="16" height="16" class="text-muted me-2"></i> Geração de relatórios</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if session.status == 'completed' %}
+    <!-- Results Summary -->
+    <div class="row mb-4" id="results-section">
+        <div class="col-md-3">
+            <div class="card bg-primary">
+                <div class="card-body text-center">
+                    <i data-feather="file-text" width="32" height="32" class="text-white mb-2"></i>
+                    <h3 class="text-white" id="total-records">
+                        {% if session.total_records %}
+                            {{ "{:,}".format(session.total_records).replace(',', '.') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </h3>
+                    <p class="text-white-50 mb-0">Total de Registros</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success">
+                <div class="card-body text-center">
+                    <i data-feather="dollar-sign" width="32" height="32" class="text-white mb-2"></i>
+                    <h3 class="text-white" id="total-faturado">
+                        {% if session.total_faturado %}
+                            {{ format_currency(session.total_faturado) }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </h3>
+                    <p class="text-white-50 mb-0">Total Faturado</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-info">
+                <div class="card-body text-center">
+                    <i data-feather="package" width="32" height="32" class="text-white mb-2"></i>
+                    <h3 class="text-white" id="total-pacotes">
+                        {% if session.total_pacotes %}
+                            {{ session.total_pacotes }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h3>
+                    <p class="text-white-50 mb-0">Pacotes Detectados</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card {% if session.inconsistencias > 0 %}bg-warning{% else %}bg-secondary{% endif %}">
+                <div class="card-body text-center">
+                    <i data-feather="alert-triangle" width="32" height="32" class="{% if session.inconsistencias > 0 %}text-dark{% else %}text-white{% endif %} mb-2"></i>
+                    <h3 class="{% if session.inconsistencias > 0 %}text-dark{% else %}text-white{% endif %}" id="total-inconsistencias">
+                        {% if session.inconsistencias %}
+                            {{ session.inconsistencias }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h3>
+                    <p class="{% if session.inconsistencias > 0 %}text-dark{% else %}text-white-50{% endif %} mb-0">Inconsistências</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i data-feather="pie-chart" class="me-2"></i>
+                        Faturamento por Empresa
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="empresaChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i data-feather="bar-chart-2" class="me-2"></i>
+                        Faturamento por Procedimento
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="procedimentoChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i data-feather="zap" class="me-2"></i>
+                        Ações Disponíveis
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('main.reports', session_id=session.id) }}" class="btn btn-primary btn-lg w-100">
+                                <i data-feather="bar-chart-2" class="me-2"></i>
+                                Ver Relatórios Completos
+                            </a>
+                        </div>
+                        {% if session.excel_filename %}
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('main.relatorio_divinopolis', session_id=session.id) }}" class="btn btn-success btn-lg w-100">
+                                <i data-feather="map-pin" class="me-2"></i>
+                                Relatório Divinópolis
+                            </a>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-3 mb-3">
+                            <button class="btn btn-outline-info btn-lg w-100" onclick="loadChartData()">
+                                <i data-feather="refresh-cw" class="me-2"></i>
+                                Atualizar Gráficos
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-lg w-100">
+                                <i data-feather="home" class="me-2"></i>
+                                Voltar ao Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if session.status == 'error' %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger">
+                    <h5 class="mb-0 text-white">
+                        <i data-feather="x-circle" class="me-2"></i>
+                        Erro no Processamento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>Ocorreu um erro durante o processamento dos dados. Possíveis causas:</p>
+                    <ul>
+                        <li>Arquivo de banco de dados corrompido ou inválido</li>
+                        <li>Tabela 'producao' não encontrada ou sem dados</li>
+                        <li>Colunas obrigatórias ausentes</li>
+                        <li>Formato de dados incompatível</li>
+                    </ul>
+                    <div class="mt-3">
+                        <a href="{{ url_for('main.upload') }}" class="btn btn-primary me-2">
+                            <i data-feather="upload" class="me-2"></i>
+                            Tentar Novamente
+                        </a>
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                            <i data-feather="home" class="me-2"></i>
+                            Voltar ao Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+const sessionId = {{ session.id }};
+let statusCheckInterval;
+let empresaChart, procedimentoChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
+    
+    {% if session.status == 'processing' %}
+    // Start status checking for processing sessions
+    startStatusCheck();
+    {% elif session.status == 'completed' %}
+    // Load charts for completed sessions
+    loadChartData();
+    {% endif %}
+});
+
+function startStatusCheck() {
+    statusCheckInterval = setInterval(checkStatus, 5000); // Check every 5 seconds
+}
+
+function checkStatus() {
+    fetch(`/api/session-status/${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'completed') {
+                clearInterval(statusCheckInterval);
+                location.reload(); // Reload page to show results
+            } else if (data.status === 'error') {
+                clearInterval(statusCheckInterval);
+                location.reload(); // Reload page to show error
+            }
+            // Continue checking if still processing
+        })
+        .catch(error => {
+            console.error('Error checking status:', error);
+        });
+}
+
+function loadChartData() {
+    fetch(`/api/chart-data/${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error loading chart data:', data.error);
+                return;
+            }
+            
+            // Update empresa chart
+            if (empresaChart) {
+                empresaChart.destroy();
+            }
+            empresaChart = createPieChart('empresaChart', data.empresa, 'Faturamento por Empresa');
+            
+            // Update procedimento chart
+            if (procedimentoChart) {
+                procedimentoChart.destroy();
+            }
+            procedimentoChart = createBarChart('procedimentoChart', data.procedimento, 'Faturamento por Procedimento');
+        })
+        .catch(error => {
+            console.error('Error loading chart data:', error);
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,879 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SAVI{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4">
+                <h1 class="h3 h2-lg mb-3 mb-lg-0">
+                    <i data-feather="home" class="me-2"></i>
+                    <span class="d-none d-md-inline">Dashboard SAVI - Análise TEA</span>
+                    <span class="d-md-none">Dashboard SAVI</span>
+                </h1>
+                <!-- Seletor de Sessão e Filtros -->
+                <form method="GET" class="d-flex flex-column flex-sm-row gap-2 w-100 w-lg-auto">
+                    <!-- Seletor de Sessão -->
+                    {% if completed_sessions_list %}
+                    <div class="input-group input-group-sm mb-2 mb-sm-0">
+                        <span class="input-group-text">
+                            <i data-feather="database" width="16" height="16"></i>
+                            <span class="d-none d-md-inline">Análise:</span>
+                        </span>
+                        <select name="session_id" class="form-select" onchange="this.form.submit()">
+                            {% for session in completed_sessions_list %}
+                            <option value="{{ session.id }}" {% if selected_session and session.id == selected_session.id %}selected{% endif %}>
+                                <span class="d-none d-md-inline">{{ session.database_filename }} ({{ session.total_records or 0 }} registros) - {{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                <span class="d-md-none">{{ session.database_filename }} ({{ session.total_records or 0 }})</span>
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Filtros de Data -->
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text d-none d-sm-inline">De:</span>
+                        <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio or '' }}" placeholder="Data início">
+                        <span class="input-group-text d-none d-sm-inline">Até:</span>
+                        <input type="date" name="data_fim" class="form-control" value="{{ data_fim or '' }}" placeholder="Data fim">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i data-feather="filter" width="16" height="16"></i>
+                            <span class="d-none d-sm-inline">Filtrar</span>
+                        </button>
+                        {% if data_inicio or data_fim %}
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                            <i data-feather="x" width="16" height="16"></i>
+                            <span class="d-none d-sm-inline">Limpar</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Informações da Análise Atual -->
+    {% if selected_session %}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i data-feather="info" class="me-2"></i>
+                <strong>Análise Ativa:</strong> {{ selected_session.database_filename }}
+                {% if selected_session.excel_filename %}
+                + {{ selected_session.excel_filename }}
+                {% endif %}
+                | Processado em: {{ selected_session.created_at.strftime('%d/%m/%Y às %H:%M') }}
+                | {{ selected_session.total_records or 0 }} registros
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Dados da Análise Selecionada -->
+    {% if dashboard_data and not dashboard_data.get('error') %}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="card-text text-white-50 mb-1 small">Total de Registros</p>
+                            <h4 class="text-white h5 h3-md">{{ "{:,}".format(dashboard_data.total_registros).replace(",", ".") }}</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="file-text" width="24" height="24" class="text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="card bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="card-text text-white-50 mb-1 small">Total Faturado</p>
+                            <h4 class="text-white h5 h3-md">{{ format_currency(dashboard_data.get('resumo_financeiro', {}).get('total_faturado', 0) or 0) }}</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="dollar-sign" width="24" height="24" class="text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="card bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="card-text text-white-50 mb-1 small">Pacotes Aplicados</p>
+                            <h4 class="text-white h5 h3-md">{{ dashboard_data.get('resumo_financeiro', {}).get('total_pacotes', 0) or 0 }}</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="package" width="24" height="24" class="text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="card bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="card-text text-dark mb-1 small">Inconsistências</p>
+                            <h4 class="text-dark h5 h3-md">{{ dashboard_data.get('inconsistencias', 0) or 0 }}</h4>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="alert-triangle" width="24" height="24" class="text-dark"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i data-feather="briefcase" class="me-2"></i>
+                        Empresas
+                    </h5>
+                    <h2 class="text-primary">{{ dashboard_data.get('total_empresas', 0) or 0 }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i data-feather="users" class="me-2"></i>
+                        Médicos
+                    </h5>
+                    <h2 class="text-info">{{ dashboard_data.get('total_medicos', 0) or 0 }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i data-feather="user" class="me-2"></i>
+                        Pacientes
+                    </h5>
+                    <h2 class="text-success">{{ dashboard_data.get('total_pacientes', 0) or 0 }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i data-feather="activity" class="me-2"></i>
+                        Procedimentos
+                    </h5>
+                    <h2 class="text-warning">{{ (dashboard_data.get('resumo_por_especialidade', {})|length) or 0 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card específico para Divinópolis -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card bg-gradient" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-white mb-1">
+                                <i data-feather="map-pin" class="me-2"></i>
+                                Faturamento Divinópolis
+                            </h5>
+                            <h2 class="text-white mb-1">{{ format_currency(dashboard_data.get('divinopolis', {}).get('valor_faturado', 0) or 0) }}</h2>
+                            <p class="text-white-50 mb-0">
+                                {{ dashboard_data.get('divinopolis', {}).get('usuarios_encontrados', 0) }} usuários • 
+                                {{ dashboard_data.get('divinopolis', {}).get('total_sessoes', 0) }} sessões
+                            </p>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="dollar-sign" width="48" height="48" class="text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card bg-gradient" style="background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title text-white mb-1">
+                                <i data-feather="map" class="me-2"></i>
+                                Faturamento BH/Contagem
+                            </h5>
+                            <h2 class="text-white mb-1">{{ format_currency((dashboard_data.get('resumo_financeiro', {}).get('total_faturado', 0) or 0) - (dashboard_data.get('divinopolis', {}).get('valor_faturado', 0) or 0)) }}</h2>
+                            <p class="text-white-50 mb-0">
+                                Demais regiões e cidades
+                            </p>
+                        </div>
+                        <div class="align-self-center">
+                            <i data-feather="dollar-sign" width="48" height="48" class="text-white-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos Dinâmicos Profissionais -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="pie-chart" class="me-2"></i>
+                        Faturamento por Empresa
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshChart('empresaChart')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <canvas id="empresaChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="bar-chart-2" class="me-2"></i>
+                        Top 10 Especialidades (Sessões)
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshChart('especialidadeChart')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <canvas id="especialidadeChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segunda linha de gráficos -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="trending-up" class="me-2"></i>
+                        Top 10 Médicos (Faturamento)
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshChart('medicosChart')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <canvas id="medicosChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="map-pin" class="me-2"></i>
+                        Divinópolis vs BH/Contagem
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshChart('divinopolisChart')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <canvas id="divinopolisChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Relatório Completo com Tabelas -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="user-check" class="me-2"></i>
+                        Top 10 Médicos (Por Sessões)
+                    </h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="exportTable('medicosTable', 'medicos')">
+                            <i data-feather="download" width="16" height="16"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="printTable('medicosTable')">
+                            <i data-feather="printer" width="16" height="16"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover" id="medicosTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Médico</th>
+                                    <th>Sessões</th>
+                                    <th>Faturamento</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set medicos = dashboard_data.get('resumo_por_medico', {}) %}
+                                {% if medicos %}
+                                    {% for medico, dados in (medicos.items() | list)[:10] %}
+                                    <tr>
+                                        <td>{{ medico[:35] }}{% if medico|length > 35 %}...{% endif %}</td>
+                                        <td><span class="badge bg-primary">{{ dados.get('sessoes', 0) }}</span></td>
+                                        <td class="text-success fw-bold">{{ format_currency(dados.get('valor', 0)) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr><td colspan="3" class="text-muted text-center">Carregando dados...</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="package" class="me-2"></i>
+                        Pacotes Aplicados
+                    </h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="exportTable('pacotesTable', 'pacotes')">
+                            <i data-feather="download" width="16" height="16"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="printTable('pacotesTable')">
+                            <i data-feather="printer" width="16" height="16"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% set pacotes = dashboard_data.get('pacotes_aplicados', []) %}
+                    {% if pacotes %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover" id="pacotesTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Tipo</th>
+                                    <th>Sessões</th>
+                                    <th>Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pacote in pacotes[:10] %}
+                                <tr>
+                                    <td>{{ pacote.get('usuario_nome', 'N/A')[:25] }}{% if pacote.get('usuario_nome', '')|length > 25 %}...{% endif %}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if pacote.get('tipo_pacote') == 'especial' else 'primary' }}">
+                                            {{ pacote.get('tipo_pacote', 'comum').title() }}
+                                        </span>
+                                    </td>
+                                    <td><span class="badge bg-info">{{ pacote.get('quantidade_sessoes', 0) }}</span></td>
+                                    <td class="text-success fw-bold">{{ format_currency(pacote.get('valor_pacote', 0)) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-feather="package" width="48" height="48" class="text-muted"></i>
+                        <p class="text-muted mt-2">Nenhum pacote foi aplicado neste período.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Análises Salvas com Opção de Deletar -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="database" class="me-2"></i>
+                        Análises Salvas - Histórico
+                    </h5>
+                    <div class="btn-group">
+                        <a href="{{ url_for('main.sessions') }}" class="btn btn-outline-primary btn-sm">
+                            <i data-feather="list" width="16" height="16" class="me-2"></i>
+                            Ver Todas
+                        </a>
+                        <a href="{{ url_for('main.upload') }}" class="btn btn-primary btn-sm">
+                            <i data-feather="plus" width="16" height="16" class="me-2"></i>
+                            Nova Análise
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if recent_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Data</th>
+                                    <th>Status</th>
+                                    <th>Registros</th>
+                                    <th>Faturamento</th>
+                                    <th class="text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in recent_sessions %}
+                                <tr>
+                                    <td><strong>#{{ session.id }}</strong></td>
+                                    <td>{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if session.status == 'completed' else 'warning' }}">
+                                            {{ session.status.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ "{:,}".format(session.total_records or 0).replace(",", ".") }}</td>
+                                    <td class="text-success fw-bold">{{ format_currency(session.total_faturado or 0) }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('main.session_status', session_id=session.id) }}" 
+                                               class="btn btn-outline-primary" title="Ver Detalhes">
+                                                <i data-feather="eye" width="16" height="16"></i>
+                                            </a>
+                                            {% if current_user.id == session.user_id or current_user.role == 'admin' %}
+                                            <button class="btn btn-outline-danger" 
+                                                    onclick="deleteSession({{ session.id }})" 
+                                                    title="Deletar Análise">
+                                                <i data-feather="trash-2" width="16" height="16"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-feather="database" width="48" height="48" class="text-muted"></i>
+                        <p class="text-muted mt-2">Nenhuma análise encontrada. Faça upload de um banco de dados para começar.</p>
+                        <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+                            <i data-feather="upload" class="me-2"></i>
+                            Enviar Banco de Dados
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- Estado quando não há dados -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i data-feather="database" width="64" height="64" class="text-muted mb-3"></i>
+                    <h4>Carregando dados do sistema...</h4>
+                    <p class="text-muted">Os dados da produção médica estão sendo processados.</p>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
+                        <i data-feather="refresh-cw" class="me-2"></i>
+                        Atualizar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Variáveis globais para armazenar as instâncias dos gráficos
+let chartInstances = {};
+
+// Configurações padrão dos gráficos
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.padding = 15;
+Chart.defaults.color = '#ffffff';
+Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+// Cores profissionais para os gráficos
+const chartColors = {
+    primary: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c', '#6c757d', '#343a40'],
+    gradients: ['rgba(13, 110, 253, 0.8)', 'rgba(25, 135, 84, 0.8)', 'rgba(220, 53, 69, 0.8)', 'rgba(255, 193, 7, 0.8)']
+};
+
+// Função para criar gráfico de rosquinha (empresas)
+function createDoughnutChart(canvasId, data, title) {
+    const ctx = document.getElementById(canvasId);
+    if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
+    }
+    
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.data,
+                backgroundColor: chartColors.primary.slice(0, data.labels.length),
+                borderWidth: 2,
+                hoverBorderWidth: 3,
+                cutout: '60%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: !!title,
+                    text: title,
+                    font: { size: 16, weight: 'bold' }
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 15, font: { size: 11 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            animation: { animateRotate: true, duration: 1500 }
+        }
+    });
+}
+
+// Função para criar gráfico de barras
+function createBarChart(canvasId, data, title) {
+    const ctx = document.getElementById(canvasId);
+    if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
+    }
+    
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: title,
+                data: data.data,
+                backgroundColor: chartColors.gradients[0],
+                borderColor: chartColors.primary[0],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: !!title,
+                    text: title,
+                    font: { size: 16, weight: 'bold' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#ffffff' }
+                },
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#ffffff', maxRotation: 45 }
+                }
+            },
+            animation: { duration: 1500 }
+        }
+    });
+}
+
+// Função para criar gráfico de barras horizontais
+function createHorizontalBarChart(canvasId, data, title) {
+    const ctx = document.getElementById(canvasId);
+    if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
+    }
+    
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: title,
+                data: data.data,
+                backgroundColor: chartColors.gradients[1],
+                borderColor: chartColors.primary[1],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: !!title,
+                    text: title,
+                    font: { size: 16, weight: 'bold' }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#ffffff' }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#ffffff' }
+                }
+            },
+            animation: { duration: 1500 }
+        }
+    });
+}
+
+// Função específica para gráfico de comparação Divinópolis vs BH/Contagem
+function createDivinopolisComparisonChart(canvasId, data) {
+    const ctx = document.getElementById(canvasId);
+    if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
+    }
+
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels || ['Divinópolis', 'BH/Contagem'],
+            datasets: [{
+                data: data.data || [0, 0],
+                backgroundColor: ['#28a745', '#0d6efd'],
+                borderColor: ['#28a745', '#0d6efd'],
+                borderWidth: 3,
+                hoverBorderWidth: 4,
+                hoverBorderColor: '#ffffff',
+                cutout: '60%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: { size: 14, weight: '500' },
+                        generateLabels: function(chart) {
+                            const originalLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            const formattedData = data.formatted_data || [];
+                            
+                            return originalLabels.map((label, index) => {
+                                if (formattedData[index]) {
+                                    label.text = `${label.text}: ${formattedData[index]}`;
+                                }
+                                return label;
+                            });
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const formattedData = data.formatted_data || [];
+                            const value = formattedData[context.dataIndex] || 'R$ 0,00';
+                            return `${label}: ${value}`;
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1000
+            }
+        }
+    });
+}
+
+// Função para carregar dados dos gráficos via API
+async function loadChartsData() {
+    try {
+        const response = await fetch('/api/dashboard-charts');
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Criar gráficos com os dados recebidos
+            createDoughnutChart('empresaChart', data.empresas, 'Faturamento por Empresa');
+            createBarChart('especialidadeChart', data.especialidades, 'Top 10 Especialidades');
+            createHorizontalBarChart('medicosChart', data.medicos_top, 'Top 10 Médicos');
+            createDivinopolisComparisonChart('divinopolisChart', data.divinopolis_vs_bh);
+            
+        } else {
+            console.error('Erro ao carregar dados dos gráficos');
+        }
+    } catch (error) {
+        console.error('Erro na requisição:', error);
+    }
+}
+
+// Função para atualizar um gráfico específico
+function refreshChart(chartId) {
+    const btn = event.target.closest('button');
+    btn.innerHTML = '<i data-feather="loader" width="16" height="16" class="spinner"></i>';
+    feather.replace();
+    
+    setTimeout(() => {
+        loadChartsData();
+        btn.innerHTML = '<i data-feather="refresh-cw" width="16" height="16"></i>';
+        feather.replace();
+    }, 1000);
+}
+
+// Função para deletar sessão com confirmação
+function deleteSession(sessionId) {
+    if (confirm('Tem certeza que deseja deletar esta análise? Esta ação não pode ser desfeita.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/delete-session/${sessionId}`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Função para exportar tabela
+function exportTable(tableId, filename) {
+    const table = document.getElementById(tableId);
+    const ws = XLSX.utils.table_to_sheet(table);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// Função para imprimir tabela
+function printTable(tableId) {
+    const table = document.getElementById(tableId);
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Relatório SAVI</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    @media print { body { margin: 0; } }
+                </style>
+            </head>
+            <body>
+                <h2>Relatório SAVI - ${new Date().toLocaleDateString('pt-BR')}</h2>
+                ${table.outerHTML}
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+// Inicializar gráficos quando a página carregar
+{% if dashboard_data %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Dados iniciais do servidor
+    {% set empresas = dashboard_data.get('resumo_por_empresa', {}) %}
+    const empresaData = {
+        labels: [{% for empresa, dados in empresas.items() %}'{{ empresa }}'{{ ',' if not loop.last }}{% endfor %}],
+        data: [{% for empresa, dados in empresas.items() %}{{ dados.get('valor', 0) }}{{ ',' if not loop.last }}{% endfor %}]
+    };
+
+    {% set especialidades = dashboard_data.get('resumo_por_especialidade', {}) %}
+    const especialidadeData = {
+        labels: [{% for especialidade, dados in (especialidades.items() | list)[:10] %}'{{ especialidade[:25] }}'{{ ',' if not loop.last }}{% endfor %}],
+        data: [{% for especialidade, dados in (especialidades.items() | list)[:10] %}{{ dados.get('sessoes', 0) }}{{ ',' if not loop.last }}{% endfor %}]
+    };
+
+    {% set medicos = dashboard_data.get('resumo_por_medico', {}) %}
+    const medicosData = {
+        labels: [{% for medico, dados in (medicos.items() | list)[:10] %}'{{ medico[:25] }}'{{ ',' if not loop.last }}{% endfor %}],
+        data: [{% for medico, dados in (medicos.items() | list)[:10] %}{{ dados.get('valor', 0) }}{{ ',' if not loop.last }}{% endfor %}]
+    };
+
+    // Dados do gráfico Divinópolis vs BH/Contagem
+    {% set divinopolis_valor = dashboard_data.get('divinopolis', {}).get('valor_faturado', 0) or 0 %}
+    {% set total_valor = dashboard_data.get('resumo_financeiro', {}).get('total_faturado', 0) or 0 %}
+    {% set bh_valor = (total_valor - divinopolis_valor) if (total_valor - divinopolis_valor) > 0 else 0 %}
+    const divinopolisData = {
+        labels: ['Divinópolis', 'BH/Contagem'],
+        data: [{{ "%.2f"|format(divinopolis_valor|float) }}, {{ "%.2f"|format(bh_valor|float) }}],
+        formatted_data: ['{{ format_currency(divinopolis_valor) }}', '{{ format_currency(bh_valor) }}']
+    };
+
+    // Criar gráficos iniciais
+    createDoughnutChart('empresaChart', empresaData, '');
+    createBarChart('especialidadeChart', especialidadeData, '');
+    createHorizontalBarChart('medicosChart', medicosData, '');
+    createDivinopolisComparisonChart('divinopolisChart', divinopolisData);
+    
+    // Atualizar ícones Feather
+    feather.replace();
+});
+{% else %}
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
+});
+{% endif %}
+
+// CSS para animação do spinner
+const style = document.createElement('style');
+style.textContent = `
+    .spinner { animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+`;
+document.head.appendChild(style);
+</script>
+
+<!-- Biblioteca para exportar Excel -->
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+{% endblock %}

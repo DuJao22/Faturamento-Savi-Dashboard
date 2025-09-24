@@ -1,0 +1,951 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório Geral - Dashboard Interativo{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.min.js"></script>
+<style>
+:root {
+    --primary-color: #2563eb;
+    --success-color: #16a34a;
+    --warning-color: #ea580c;
+    --danger-color: #dc2626;
+    --info-color: #0891b2;
+    --dark-color: #1f2937;
+    --light-color: #f8fafc;
+}
+
+.dashboard-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.filter-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+.metric-card {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    border-radius: 15px;
+    padding: 20px 15px;
+    color: white;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.metric-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    counter-reset: num var(--num);
+    animation: countUp 2s ease-out;
+    line-height: 1.2;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+}
+
+/* Responsividade para dispositivos móveis */
+@media (max-width: 576px) {
+    .metric-card {
+        padding: 15px 10px;
+        min-height: 100px;
+    }
+    
+    .metric-value {
+        font-size: 1.4rem;
+    }
+    
+    .metric-label {
+        font-size: 0.7rem;
+    }
+    
+    .chart-title {
+        font-size: 1rem;
+    }
+    
+    .filter-section {
+        padding: 15px;
+    }
+    
+    .btn-filter, .export-btn {
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    .chart-container {
+        margin-bottom: 15px;
+        padding: 15px;
+    }
+    
+    .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .refresh-btn {
+        align-self: flex-end;
+    }
+}
+
+.filter-section {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.btn-filter {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--info-color) 100%);
+    border: none;
+    border-radius: 25px;
+    padding: 10px 25px;
+    color: white;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-filter:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+    color: white;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes countUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.chart-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.refresh-btn {
+    background: none;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.refresh-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: rotate(180deg);
+}
+
+.date-range-picker {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 15px;
+    transition: all 0.3s ease;
+}
+
+.date-range-picker:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.select-modern {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 15px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.select-modern:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.export-btn {
+    background: linear-gradient(135deg, var(--success-color) 0%, #22c55e 100%);
+    border: none;
+    border-radius: 25px;
+    padding: 10px 20px;
+    color: white;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.export-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(22, 163, 74, 0.3);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+</div>
+
+<div class="container-fluid">
+    <!-- Cabeçalho da Página -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                <div class="mb-3 mb-md-0">
+                    <h1 class="h3 h2-md text-dark fw-bold">📊 Relatório Geral</h1>
+                    <p class="text-muted mb-0">Dashboard interativo com análise completa</p>
+                </div>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                    <button class="btn export-btn btn-sm" onclick="exportToExcel()">
+                        <i data-feather="download" width="16" height="16"></i> 
+                        <span class="d-none d-sm-inline">Exportar Excel</span>
+                        <span class="d-sm-none">Excel</span>
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+                        <i data-feather="refresh-cw" width="16" height="16"></i> 
+                        <span class="d-none d-sm-inline">Atualizar</span>
+                        <span class="d-sm-none">Refresh</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Filtros -->
+    <div class="filter-section">
+        <h4 class="mb-3 text-dark">🔍 Filtros Avançados</h4>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Período</label>
+                <input type="date" class="form-control date-range-picker" id="startDate">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Até</label>
+                <input type="date" class="form-control date-range-picker" id="endDate">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Empresa</label>
+                <select class="form-select select-modern" id="empresaFilter">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Especialidade</label>
+                <select class="form-select select-modern" id="especialidadeFilter">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-filter w-100" onclick="applyFilters()">
+                    <i data-feather="filter" width="16" height="16"></i> Aplicar
+                </button>
+            </div>
+        </div>
+        
+        <div class="row g-3 mt-2">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Médico</label>
+                <select class="form-select select-modern" id="medicoFilter">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Região</label>
+                <select class="form-select select-modern" id="regiaoFilter">
+                    <option value="">Todas</option>
+                    <option value="divinopolis">Divinópolis</option>
+                    <option value="bh_contagem">BH/Contagem</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Tipo de Carteirinha</label>
+                <select class="form-select select-modern" id="carteiraFilter">
+                    <option value="">Todas</option>
+                    <option value="especial">Especial</option>
+                    <option value="comum">Comum</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                    <i data-feather="x" width="16" height="16"></i> Limpar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards de Métricas Principais -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="metric-card">
+                <div class="metric-value" id="totalFaturamento">R$ 0,00</div>
+                <div class="metric-label">Faturamento Total</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="metric-card" style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);">
+                <div class="metric-value" id="totalSessoes">0</div>
+                <div class="metric-label">Total de Sessões</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="metric-card" style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);">
+                <div class="metric-value" id="totalPacientes">0</div>
+                <div class="metric-label">Pacientes Ativos</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="metric-card" style="background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);">
+                <div class="metric-value" id="totalMedicos">0</div>
+                <div class="metric-label">Médicos Ativos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos Principal -->
+    <div class="row g-3">
+        <!-- Faturamento por Período -->
+        <div class="col-12 col-lg-8">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h6 class="chart-title">📈 Faturamento por Período</h6>
+                    <button class="refresh-btn" onclick="refreshChart('faturamentoPeriodo')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div style="position: relative; height: 250px;">
+                    <canvas id="faturamentoPeriodoChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Empresas -->
+        <div class="col-12 col-lg-4">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h6 class="chart-title">🏢 Top Empresas</h6>
+                    <button class="refresh-btn" onclick="refreshChart('empresas')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div style="position: relative; height: 250px;">
+                    <canvas id="empresasChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Performance por Médico -->
+        <div class="col-12 col-md-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h6 class="chart-title">👨‍⚕️ Performance por Médico</h6>
+                    <button class="refresh-btn" onclick="refreshChart('medicos')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div style="position: relative; height: 300px;">
+                    <canvas id="medicosChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Especialidades Mais Realizadas -->
+        <div class="col-12 col-md-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h6 class="chart-title">🎯 Especialidades Populares</h6>
+                    <button class="refresh-btn" onclick="refreshChart('especialidades')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div style="position: relative; height: 300px;">
+                    <canvas id="especialidadesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Comparativo Regional -->
+        <div class="col-12 col-md-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h6 class="chart-title">🗺️ Comparativo Regional</h6>
+                    <button class="refresh-btn" onclick="refreshChart('regional')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div style="position: relative; height: 250px;">
+                    <canvas id="regionalChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Análise de Pacotes -->
+        <div class="col-12 col-md-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h6 class="chart-title">📦 Análise de Pacotes</h6>
+                    <button class="refresh-btn" onclick="refreshChart('pacotes')">
+                        <i data-feather="refresh-cw" width="16" height="16"></i>
+                    </button>
+                </div>
+                <div style="position: relative; height: 250px;">
+                    <canvas id="pacotesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variáveis globais para armazenar os gráficos
+let charts = {};
+let currentFilters = {};
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    loadInitialData();
+    setupEventListeners();
+    feather.replace();
+});
+
+// Configurar listeners de eventos
+function setupEventListeners() {
+    // Auto-aplicar filtros quando dados mudarem
+    ['empresaFilter', 'especialidadeFilter', 'medicoFilter', 'regiaoFilter', 'carteiraFilter'].forEach(filterId => {
+        document.getElementById(filterId).addEventListener('change', applyFilters);
+    });
+    
+    // Aplicar filtros ao mudar datas
+    ['startDate', 'endDate'].forEach(dateId => {
+        document.getElementById(dateId).addEventListener('change', applyFilters);
+    });
+}
+
+// Carregar dados iniciais
+async function loadInitialData() {
+    showLoading(true);
+    try {
+        // Carregar opções de filtros
+        await loadFilterOptions();
+        
+        // Carregar dados dos gráficos
+        await loadDashboardData();
+        
+    } catch (error) {
+        console.error('Erro ao carregar dados iniciais:', error);
+        showAlert('Erro ao carregar dados. Tente novamente.', 'danger');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Carregar opções para os filtros
+async function loadFilterOptions() {
+    try {
+        const response = await fetch('/api/general-report/filters');
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Preencher selects de filtros
+            populateSelect('empresaFilter', data.empresas || []);
+            populateSelect('especialidadeFilter', data.especialidades || []);
+            populateSelect('medicoFilter', data.medicos || []);
+            
+            // Definir datas padrão (último mês)
+            const today = new Date();
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            
+            document.getElementById('startDate').value = formatDate(lastMonth);
+            document.getElementById('endDate').value = formatDate(today);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar filtros:', error);
+    }
+}
+
+// Preencher select com opções
+function populateSelect(selectId, options) {
+    const select = document.getElementById(selectId);
+    const currentValue = select.value;
+    
+    // Limpar opções existentes (exceto a primeira)
+    while (select.children.length > 1) {
+        select.removeChild(select.lastChild);
+    }
+    
+    // Adicionar novas opções
+    options.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option;
+        optionElement.textContent = option;
+        select.appendChild(optionElement);
+    });
+    
+    // Restaurar valor selecionado
+    select.value = currentValue;
+}
+
+// Carregar dados do dashboard
+async function loadDashboardData() {
+    try {
+        const queryParams = new URLSearchParams(currentFilters);
+        const response = await fetch(`/api/general-report/data?${queryParams}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Atualizar métricas
+            updateMetrics(data.metrics);
+            
+            // Criar/atualizar gráficos
+            createCharts(data.charts);
+            
+        } else {
+            throw new Error('Erro ao carregar dados');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar dados do dashboard:', error);
+        showAlert('Erro ao carregar dados do dashboard', 'danger');
+    }
+}
+
+// Atualizar métricas principais
+function updateMetrics(metrics) {
+    document.getElementById('totalFaturamento').textContent = formatCurrency(metrics.faturamento_total || 0);
+    document.getElementById('totalSessoes').textContent = (metrics.total_sessoes || 0).toLocaleString('pt-BR');
+    document.getElementById('totalPacientes').textContent = (metrics.total_pacientes || 0).toLocaleString('pt-BR');
+    document.getElementById('totalMedicos').textContent = (metrics.total_medicos || 0).toLocaleString('pt-BR');
+}
+
+// Criar todos os gráficos
+function createCharts(chartsData) {
+    // Faturamento por período (linha)
+    createLineChart('faturamentoPeriodoChart', chartsData.faturamento_periodo);
+    
+    // Top empresas (rosca)
+    createDoughnutChart('empresasChart', chartsData.empresas);
+    
+    // Performance médicos (barra horizontal)
+    createHorizontalBarChart('medicosChart', chartsData.medicos);
+    
+    // Especialidades (barra vertical)
+    createBarChart('especialidadesChart', chartsData.especialidades);
+    
+    // Comparativo regional (rosca)
+    createDoughnutChart('regionalChart', chartsData.regional);
+    
+    // Análise pacotes (barra)
+    createBarChart('pacotesChart', chartsData.pacotes);
+}
+
+// Gráfico de linha para faturamento por período
+function createLineChart(canvasId, data) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+    
+    charts[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels || [],
+            datasets: [{
+                label: 'Faturamento',
+                data: data.data || [],
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#2563eb',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    callbacks: {
+                        label: function(context) {
+                            return `Faturamento: ${formatCurrency(context.parsed.y)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            },
+            animation: {
+                duration: 2000,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+}
+
+// Gráfico de rosca
+function createDoughnutChart(canvasId, data) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+    
+    charts[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels || [],
+            datasets: [{
+                data: data.data || [],
+                backgroundColor: [
+                    '#2563eb', '#16a34a', '#ea580c', '#0891b2', 
+                    '#7c3aed', '#dc2626', '#059669', '#7c2d12'
+                ],
+                borderWidth: 3,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    callbacks: {
+                        label: function(context) {
+                            const value = canvasId.includes('empresas') || canvasId.includes('regional') 
+                                ? formatCurrency(context.parsed) 
+                                : context.parsed.toLocaleString('pt-BR');
+                            return `${context.label}: ${value}`;
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                duration: 2000
+            }
+        }
+    });
+}
+
+// Gráfico de barras horizontal
+function createHorizontalBarChart(canvasId, data) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+    
+    charts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels || [],
+            datasets: [{
+                label: 'Faturamento',
+                data: data.data || [],
+                backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                borderColor: '#2563eb',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    callbacks: {
+                        label: function(context) {
+                            return `Faturamento: ${formatCurrency(context.parsed.x)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            },
+            animation: {
+                duration: 1500,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+}
+
+// Gráfico de barras vertical
+function createBarChart(canvasId, data) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+    
+    charts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels || [],
+            datasets: [{
+                label: 'Sessões',
+                data: data.data || [],
+                backgroundColor: 'rgba(22, 163, 74, 0.8)',
+                borderColor: '#16a34a',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    callbacks: {
+                        label: function(context) {
+                            return `Sessões: ${context.parsed.y.toLocaleString('pt-BR')}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            animation: {
+                duration: 1500,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+}
+
+// Aplicar filtros
+function applyFilters() {
+    currentFilters = {
+        start_date: document.getElementById('startDate').value,
+        end_date: document.getElementById('endDate').value,
+        empresa: document.getElementById('empresaFilter').value,
+        especialidade: document.getElementById('especialidadeFilter').value,
+        medico: document.getElementById('medicoFilter').value,
+        regiao: document.getElementById('regiaoFilter').value,
+        carteira: document.getElementById('carteiraFilter').value
+    };
+    
+    // Remover filtros vazios
+    Object.keys(currentFilters).forEach(key => {
+        if (!currentFilters[key]) {
+            delete currentFilters[key];
+        }
+    });
+    
+    loadDashboardData();
+}
+
+// Limpar filtros
+function clearFilters() {
+    document.getElementById('startDate').value = '';
+    document.getElementById('endDate').value = '';
+    document.getElementById('empresaFilter').value = '';
+    document.getElementById('especialidadeFilter').value = '';
+    document.getElementById('medicoFilter').value = '';
+    document.getElementById('regiaoFilter').value = '';
+    document.getElementById('carteiraFilter').value = '';
+    
+    currentFilters = {};
+    loadDashboardData();
+}
+
+// Atualizar gráfico específico
+function refreshChart(chartType) {
+    if (!event || !event.target) return;
+    
+    const button = event.target.closest('button');
+    if (!button) return;
+    
+    const icon = button.querySelector('i');
+    if (icon) {
+        icon.style.animation = 'spin 1s linear infinite';
+    }
+    
+    setTimeout(() => {
+        loadDashboardData();
+        if (icon) {
+            icon.style.animation = '';
+        }
+    }, 1000);
+}
+
+// Exportar para Excel
+function exportToExcel() {
+    showLoading(true);
+    
+    const queryParams = new URLSearchParams(currentFilters);
+    const link = document.createElement('a');
+    link.href = `/api/general-report/export?${queryParams}`;
+    link.download = `relatorio_geral_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => showLoading(false), 2000);
+}
+
+// Utilidades
+function showLoading(show) {
+    document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+}
+
+function showAlert(message, type = 'info') {
+    // Implementar sistema de alertas toast
+    console.log(`${type.toUpperCase()}: ${message}`);
+}
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value || 0);
+}
+
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
+}
+</script>
+
+<!-- Script para exportar Excel -->
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+{% endblock %}

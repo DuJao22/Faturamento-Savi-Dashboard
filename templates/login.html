@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Login - SAVI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card mt-5">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i data-feather="activity" width="48" height="48" class="text-primary"></i>
+                        <h1 class="h3 mt-2">SAVI Assistant</h1>
+                        <p class="text-muted">Assistente de IA para Análise de Dados TEA</p>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Usuário</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i data-feather="user" width="16" height="16"></i>
+                                </span>
+                                <input type="text" class="form-control" id="username" name="username" required autofocus>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Senha</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i data-feather="lock" width="16" height="16"></i>
+                                </span>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i data-feather="log-in" class="me-2" width="16" height="16"></i>
+                                Entrar
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <small class="text-muted">
+                            Usuário padrão: <strong>admin</strong> / Senha: <strong>admin123</strong>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i data-feather="info" class="me-2"></i>
+                        Sobre o Sistema
+                    </h5>
+                    <p class="card-text text-muted small">
+                        O SAVI Assistant é um sistema especializado na análise de dados clínicos 
+                        para atendimento de pacientes com TEA (Transtorno do Espectro Autista).
+                    </p>
+                    <ul class="list-unstyled small text-muted">
+                        <li><i data-feather="check" width="14" height="14" class="me-1"></i> Processamento de dados SQLite</li>
+                        <li><i data-feather="check" width="14" height="14" class="me-1"></i> Análise de faturamento</li>
+                        <li><i data-feather="check" width="14" height="14" class="me-1"></i> Detecção de pacotes</li>
+                        <li><i data-feather="check" width="14" height="14" class="me-1"></i> Relatórios detalhados</li>
+                        <li><i data-feather="check" width="14" height="14" class="me-1"></i> Validação de inconsistências</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

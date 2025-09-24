@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Usuários - SAVI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i data-feather="users" class="me-2"></i>
+                    Gerenciar Usuários
+                </h1>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+                    <i data-feather="user-plus" class="me-2"></i>
+                    Novo Usuário
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Email</th>
+                                    <th>Perfil</th>
+                                    <th>Status</th>
+                                    <th>Criado em</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>
+                                        <i data-feather="user" class="me-2"></i>
+                                        <strong>{{ user.username }}</strong>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        <span class="badge {% if user.role == 'admin' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                            {{ user.role.title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if user.is_active %}
+                                            <span class="badge bg-success">Ativo</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inativo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        {% if user.id != current_user.id %}
+                                        <button class="btn btn-sm btn-outline-warning" onclick="toggleUserStatus({{ user.id }}, {{ user.is_active|lower }})">
+                                            {% if user.is_active %}
+                                                <i data-feather="user-x" width="14" height="14"></i>
+                                            {% else %}
+                                                <i data-feather="user-check" width="14" height="14"></i>
+                                            {% endif %}
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleUserStatus(userId, isActive) {
+    const action = isActive ? 'desativar' : 'ativar';
+    if (confirm(`Tem certeza que deseja ${action} este usuário?`)) {
+        // Implementar funcionalidade de toggle status
+        alert(`Funcionalidade de ${action} usuário será implementada.`);
+    }
+}
+</script>
+{% endblock %}

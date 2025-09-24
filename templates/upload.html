@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Upload de Arquivos - SAVI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i data-feather="upload" class="me-2"></i>
+                Nova Análise
+            </h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="file-plus" class="me-2"></i>
+                        Upload de Arquivos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                        <div class="mb-4">
+                            <label for="database_file" class="form-label">
+                                <i data-feather="database" class="me-2"></i>
+                                Banco de Dados SQLite <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" class="form-control" id="database_file" name="database_file" 
+                                   required>
+                            <div class="form-text">
+                                Selecione qualquer arquivo de banco de dados (preferencialmente .db, .sqlite, .sqlite3)
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="excel_file" class="form-label">
+                                <i data-feather="file-text" class="me-2"></i>
+                                Planilha de Carteirinhas (Opcional)
+                            </label>
+                            <input type="file" class="form-control" id="excel_file" name="excel_file">
+                            <div class="form-text">
+                                Qualquer arquivo Excel com códigos de pacientes para aplicação de preços especiais
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary me-md-2">
+                                <i data-feather="arrow-left" class="me-2"></i>
+                                Voltar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i data-feather="upload" class="me-2"></i>
+                                Iniciar Análise
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card border-info">
+                <div class="card-header bg-info">
+                    <h6 class="mb-0 text-white">
+                        <i data-feather="info" class="me-2"></i>
+                        Requisitos dos Arquivos
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6>Banco de Dados:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> Formato SQLite (.db, .sqlite, .sqlite3)</li>
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> Tabela 'producao' obrigatória</li>
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> Tamanho máximo: 50MB</li>
+                    </ul>
+                    
+                    <h6 class="mt-3">Colunas Obrigatórias:</h6>
+                    <ul class="list-unstyled small">
+                        <li><code>empresa</code></li>
+                        <li><code>procedimento_nome</code></li>
+                        <li><code>procedimento_codigo</code></li>
+                        <li><code>medico_nome</code></li>
+                        <li><code>usuario_nome</code></li>
+                        <li><code>usuario_codigo</code></li>
+                        <li><code>data_execucao</code></li>
+                    </ul>
+                    
+                    <h6 class="mt-3">Planilha Excel:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> Formato .xlsx ou .xls</li>
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> Coluna com códigos de usuários</li>
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> Opcional para preços especiais</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card border-warning mt-3">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0 text-dark">
+                        <i data-feather="alert-triangle" class="me-2"></i>
+                        Regras de Processamento
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled small">
+                        <li><i data-feather="arrow-right" width="14" height="14" class="text-info me-2"></i> 
+                            <strong>Pacotes:</strong> 12+ sessões no mesmo mês
+                        </li>
+                        <li><i data-feather="arrow-right" width="14" height="14" class="text-info me-2"></i> 
+                            <strong>Comum:</strong> R$ 1.150,00
+                        </li>
+                        <li><i data-feather="arrow-right" width="14" height="14" class="text-info me-2"></i> 
+                            <strong>Especial:</strong> R$ 1.600,00
+                        </li>
+                        <li><i data-feather="arrow-right" width="14" height="14" class="text-info me-2"></i> 
+                            <strong>Rafael Elian (00.01.001-4):</strong> R$ 150,00 / R$ 180,00
+                        </li>
+                        <li><i data-feather="arrow-right" width="14" height="14" class="text-info me-2"></i> 
+                            Validação empresa × procedimento
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card border-success mt-3">
+                <div class="card-header bg-success">
+                    <h6 class="mb-0 text-white">
+                        <i data-feather="shield" class="me-2"></i>
+                        Segurança
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled small">
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> 
+                            Arquivos validados antes do processamento
+                        </li>
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> 
+                            Limpeza automática após 24h
+                        </li>
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> 
+                            Acesso restrito por usuário
+                        </li>
+                        <li><i data-feather="check" width="14" height="14" class="text-success me-2"></i> 
+                            Histórico completo de análises
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('uploadForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const dbFileInput = document.getElementById('database_file');
+    const excelFileInput = document.getElementById('excel_file');
+    
+    // Adicionar indicador de progresso
+    function showProgress() {
+        submitBtn.innerHTML = '<i data-feather="loader" class="me-2 spinner"></i>Processando...';
+        submitBtn.disabled = true;
+        feather.replace();
+    }
+    
+    // Função para validar arquivo
+    function validateFile(file, allowedExtensions, maxSize = 50 * 1024 * 1024) {
+        if (!file) return { valid: false, message: 'Nenhum arquivo selecionado' };
+        
+        const extension = file.name.split('.').pop().toLowerCase();
+        if (!allowedExtensions.includes(extension)) {
+            return { valid: false, message: `Extensão não permitida. Use: ${allowedExtensions.join(', ')}` };
+        }
+        
+        if (file.size > maxSize) {
+            return { valid: false, message: `Arquivo muito grande. Máximo: ${Math.round(maxSize / 1024 / 1024)}MB` };
+        }
+        
+        return { valid: true, message: 'Arquivo válido' };
+    }
+    
+    // Validação em tempo real
+    dbFileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        const validation = { valid: true, message: 'Arquivo aceito' };
+        
+        const feedback = this.parentNode.querySelector('.file-feedback') || document.createElement('div');
+        feedback.className = 'file-feedback mt-2';
+        
+        if (validation.valid) {
+            feedback.innerHTML = `<small class="text-success"><i data-feather="check-circle" width="16" height="16"></i> ${validation.message}</small>`;
+        } else {
+            feedback.innerHTML = `<small class="text-danger"><i data-feather="x-circle" width="16" height="16"></i> ${validation.message}</small>`;
+        }
+        
+        if (!this.parentNode.querySelector('.file-feedback')) {
+            this.parentNode.appendChild(feedback);
+        }
+        feather.replace();
+    });
+    
+    excelFileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (!file) return;
+        
+        const validation = { valid: true, message: 'Arquivo aceito' };
+        
+        const feedback = this.parentNode.querySelector('.file-feedback') || document.createElement('div');
+        feedback.className = 'file-feedback mt-2';
+        
+        if (validation.valid) {
+            feedback.innerHTML = `<small class="text-success"><i data-feather="check-circle" width="16" height="16"></i> ${validation.message}</small>`;
+        } else {
+            feedback.innerHTML = `<small class="text-danger"><i data-feather="x-circle" width="16" height="16"></i> ${validation.message}</small>`;
+        }
+        
+        if (!this.parentNode.querySelector('.file-feedback')) {
+            this.parentNode.appendChild(feedback);
+        }
+        feather.replace();
+    });
+    
+    // Validação no envio do formulário
+    form.addEventListener('submit', function(e) {
+        // Validar arquivo de banco
+        const dbFile = dbFileInput.files[0];
+        if (!dbFile) {
+            e.preventDefault();
+            alert('Por favor, selecione o arquivo de banco de dados.');
+            return;
+        }
+        
+        // Todos os arquivos são aceitos agora
+        
+        // Mostrar progresso
+        showProgress();
+        
+        // Permitir envio do formulário
+    });
+    
+    // Inicializar ícones Feather
+    feather.replace();
+});
+
+// CSS para animação do spinner
+const style = document.createElement('style');
+style.textContent = `
+    .spinner { animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}
